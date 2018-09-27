@@ -56,11 +56,6 @@
       <artifactId>org.apache.poi.xwpf.converter.xhtml</artifactId>
       <version>1.0.5</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.commons.io</groupId>
-      <artifactId>commonsIO</artifactId>
-      <version>2.6</version>
-    </dependency>
   </dependencies>
 
   <build>

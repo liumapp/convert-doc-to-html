@@ -1,7 +1,6 @@
 package com.liumapp.convert.html.fromdoc;
 
 import java.io.*;
-import java.util.List;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
@@ -11,14 +10,14 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.converter.PicturesManager;
 import org.apache.poi.hwpf.converter.WordToHtmlConverter;
-import org.apache.poi.hwpf.usermodel.Picture;
 import org.apache.poi.hwpf.usermodel.PictureType;
-import org.apache.commons.io.FileUtils;
 import org.apache.poi.xwpf.converter.core.FileImageExtractor;
 import org.apache.poi.xwpf.converter.core.FileURIResolver;
 import org.apache.poi.xwpf.converter.xhtml.XHTMLConverter;
 import org.apache.poi.xwpf.converter.xhtml.XHTMLOptions;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+
+import org.w3c.dom.Document;
 
 /**
  * file Doc2Html.java
@@ -30,16 +29,25 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
  */
 public class Doc2Html {
 
-    public void convert() {
-        String fileName = file.getOriginalFilename();
-        SaveFile.savePic(file.getInputStream(), fileName);
-        InputStream input = new FileInputStream(path + fileName);
-        String suffix = fileName.substring(fileName.indexOf(".") + 1);// //截取文件格式名
+    private String savePath;
+
+    public String getSavePath() {
+        return savePath;
+    }
+
+    public Doc2Html setSavePath(String savePath) {
+        this.savePath = savePath;
+        return this;
+    }
+
+    public String convert (File file) throws ParserConfigurationException, IOException, TransformerException {
+        InputStream input = new FileInputStream(file);
+        String filename = file.getName();
+        String suffix = filename.substring(filename.indexOf(".") + 1);
         if ("docx".equals(suffix)) {
-            String content = parseDocxToHtml(fileName);
+            String content = parseDocxToHtml(file);
             return content;
         }
-        //实例化WordToHtmlConverter，为图片等资源文件做准备
         WordToHtmlConverter wordToHtmlConverter = new WordToHtmlConverter(
                 DocumentBuilderFactory.newInstance().newDocumentBuilder()
                         .newDocument());
@@ -50,35 +58,54 @@ public class Doc2Html {
             }
         });
         if ("doc".equals(suffix.toLowerCase())) {
-            // doc
             HWPFDocument wordDocument = new HWPFDocument(input);
             wordToHtmlConverter.processDocument(wordDocument);
-            //处理图片，会在同目录下生成并保存图片
-            List pics = wordDocument.getPicturesTable().getAllPictures();
-            if (pics != null) {
-                for (int i = 0; i < pics.size(); i++) {
-                    Picture pic = (Picture) pics.get(i);
-                    try {
-                        pic.writeImageContent(new FileOutputStream(path
-                                + pic.suggestFullFileName()));
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
         }
-        // 转换
+
         String content = conversion(wordToHtmlConverter);
-        RespInfo respInfo = new RespInfo();
-        if (content != null) {
-            respInfo.setContent(content);
-            respInfo.setMessage("success");
-            respInfo.setStatus(InfoCode.SUCCESS);
-        } else {
-            respInfo.setMessage("error");
-            respInfo.setStatus(InfoCode.ERROR);
+        return content;
+    }
+
+    private String parseDocxToHtml(File file) throws IOException {
+        if (!file.exists()) {
+            return null;
         }
-        return JSON.toJSONString(respInfo);
+        if (file.getName().endsWith(".docx") || file.getName().endsWith(".DOCX")) {
+            InputStream in = new FileInputStream(file);
+            XWPFDocument document = new XWPFDocument(in);
+
+            File imageFolderFile = new File(savePath);
+            XHTMLOptions options = XHTMLOptions.create().URIResolver(
+                    new FileURIResolver(imageFolderFile));
+            options.setExtractor(new FileImageExtractor(imageFolderFile));
+            options.setIgnoreStylesIfUnused(false);
+            options.setFragment(true);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            XHTMLConverter.getInstance().convert(document, baos, options);
+            String content = baos.toString();
+            baos.close();
+            return content;
+        } else {
+            System.out.println("Enter only MS Office 2007+ files");
+        }
+        return null;
+    }
+
+    private String conversion(WordToHtmlConverter wordToHtmlConverter) throws TransformerException, IOException {
+        Document htmlDocument = wordToHtmlConverter.getDocument();
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        DOMSource domSource = new DOMSource(htmlDocument);
+        StreamResult streamResult = new StreamResult(outStream);
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer serializer = tf.newTransformer();
+        serializer.setOutputProperty(OutputKeys.ENCODING, "utf-8");
+        serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+        serializer.setOutputProperty(OutputKeys.METHOD, "html");
+        serializer.transform(domSource, streamResult);
+        outStream.close();
+        String content = new String(outStream.toByteArray());
+        return content;
     }
 
 }
