@@ -2,6 +2,11 @@ package com.liumapp.convert.html.fromdoc;
 
 import org.junit.Test;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import java.io.File;
+import java.io.IOException;
+
 /**
  * file Doc2HtmlTest.java
  * author liumapp
@@ -12,9 +17,14 @@ import org.junit.Test;
  */
 public class Doc2HtmlTest {
 
+    private String dataPath = "/usr/local/tomcat/project/convert-doc-to-html/data/";
+
     @Test
-    public void testConvert () {
-        
+    public void testConvert () throws IOException, TransformerException, ParserConfigurationException {
+        Doc2Html doc2Html = new Doc2Html();
+        doc2Html.setSavePath(dataPath + "/html/");
+        String html = doc2Html.convert(new File(dataPath + "/doc/test.doc"));
+        System.out.println(html);
     }
 
 }
