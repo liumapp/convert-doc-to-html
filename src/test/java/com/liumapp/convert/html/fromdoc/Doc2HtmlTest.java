@@ -4,7 +4,9 @@ import org.junit.Test;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 
 /**
@@ -24,7 +26,8 @@ public class Doc2HtmlTest {
         Doc2Html doc2Html = new Doc2Html();
         doc2Html.setSavePath(dataPath + "/html/");
         String html = doc2Html.convert(new File(dataPath + "/doc/test.doc"));
-        System.out.println(html);
+        BufferedWriter bw = new BufferedWriter(new FileWriter(dataPath + "/html/test.html"));
+        bw.write(html);
     }
 
 }
